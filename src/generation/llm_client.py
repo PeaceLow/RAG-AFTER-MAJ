@@ -1,6 +1,7 @@
 import torch
 from typing import List
 import sys
+import os
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from src.models import Chunk
@@ -25,6 +26,10 @@ class LLMClient:
                 self.device = "cuda"
             else:
                 self.device = "cpu"
+                try:
+                    torch.set_num_threads(os.cpu_count() or 4)
+                except Exception:
+                    pass
         else:
             self.device = device
 
@@ -85,7 +90,7 @@ class LLMClient:
         self,
         question: str,
         chunks: List[Chunk],
-        max_new_tokens: int = 2048,
+        max_new_tokens: int = 256,
         stream: bool = False,
     ) -> str:
         """
@@ -105,7 +110,8 @@ class LLMClient:
                     "You are a helpful coding assistant. You must answer the "
                     "user's question based ONLY on the provided context. "
                     "Cite your sources. If the answer is not in the context, "
-                    "say so."
+                    "say so. Keep your answer concise, precise, and clear "
+                    "(maximum 3 sentences)."
                 ),
             },
             {
