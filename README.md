@@ -7,11 +7,25 @@ This project implements a Retrieval-Augmented Generation (RAG) system tailored f
 
 ## Instructions
 1. **Requirements:** Python 3.10+, `uv` package manager.
-2. **Installation:** Run `make install` to install all dependencies from `pyproject.toml` and `uv.lock`.
-3. **Index Generation:** Run `uv run python -m src.main index` to process the data and generate the BM25 index.
-4. **Search/Querying:** Run `uv run python -m src.main search "Your question here"` to retrieve context.
-5. **Answer Generation:** Run `uv run python -m src.main answer "Your question here"` to retrieve context and generate an AI answer.
-6. **Linting:** Run `make lint` or `make lint-strict` to verify type hinting and PEP 8 standard constraints.
+2. **Installation:** Run `make install` (or `uv sync`) to install all dependencies from `pyproject.toml` and `uv.lock`.
+3. **Index Generation:** Run `uv run python -m src index` to process the vLLM repository and generate the BM25 index.
+4. **Search:** Run `uv run python -m src search "Your question here" --k 10` to retrieve the top-k relevant chunks.
+5. **Answer Generation:** Run `uv run python -m src answer "Your question here" --k 10` to retrieve context and generate an AI answer.
+6. **Batch Search:** Run `uv run python -m src search_dataset --dataset_path <path_to_dataset.json> --k 10` to process an entire dataset of questions.
+7. **Batch Answer:** Run `uv run python -m src answer_dataset <search_results.json> <output_dir>` to generate answers for a batch of search results.
+8. **Evaluate:** Run `uv run python -m src evaluate --dataset_path <ground_truth.json> --k 10` to compute Recall@k against ground truth.
+9. **Linting:** Run `make lint` or `make lint-strict` to verify type hinting and PEP 8 standard constraints.
+
+### CLI Commands Summary
+
+| Command | Description |
+|---------|-------------|
+| `index` | Index the vLLM repository and save the BM25 index to disk |
+| `search` | Search for the top-k relevant chunks for a single query |
+| `search_dataset` | Process a JSON file of questions and export search results |
+| `answer` | Answer a single question using retrieved context + LLM |
+| `answer_dataset` | Generate answers for all questions in a search results file |
+| `evaluate` | Evaluate retrieval quality (Recall@k) against ground truth |
 
 ## System Architecture
 The RAG pipeline is composed of the following modules:
@@ -47,14 +61,29 @@ We chose **BM25** (via the `bm25s` library), an advanced TF-IDF variant. It effi
 
 ## Example Usage
 ```bash
-# Index the vLLM repository
-uv run python -m src.main index --repo_path vllm-0.10.1
+# Install dependencies
+uv sync
 
-# Answer a query using top 5 context snippets
-uv run python -m src.main answer "How to configure OpenAI server?" --k 5 --stream True
+# Index the vLLM repository
+uv run python -m src index --repo_path vllm-0.10.1
+
+# Search for relevant chunks (outputs valid JSON via StudentSearchResults)
+uv run python -m src search "How to configure OpenAI server?" --k 10
+
+# Answer a query using top 10 context snippets (outputs valid JSON via StudentSearchResultsAndAnswer)
+uv run python -m src answer "How to configure OpenAI server?" --k 10
+
+# Stream the answer in real-time
+uv run python -m src answer "How to configure OpenAI server?" --k 10 --stream True
+
+# Process an entire dataset of questions
+uv run python -m src search_dataset --dataset_path datasets_public/public/UnansweredQuestions/dataset_docs_public.json --k 10
+
+# Generate batch answers from search results
+uv run python -m src answer_dataset data/output/search_results/results_dataset_docs_public.json data/output/answers/
 
 # Evaluate the retriever against ground truth
-uv run python -m src.main evaluate --dataset_path datasets_public/public/AnsweredQuestions/dataset_docs_public.json --k 10
+uv run python -m src evaluate --dataset_path datasets_public/public/AnsweredQuestions/dataset_docs_public.json --k 10
 ```
 
 ## Resources

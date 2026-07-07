@@ -108,7 +108,22 @@ class BM25Retriever(BaseRetriever):
             List[Chunk]: The top k chunks retrieved.
         """
         if not self.chunks:
-            raise ValueError("The index is empty. Please run indexing first.")
+            print(
+                "\033[93m\033[1mAttention\033[0m : L'index est vide."
+            )
+            return []
+
+        # Handle k=0 gracefully
+        if k <= 0:
+            return []
+
+        # Handle empty or whitespace-only query
+        if not query or not query.strip():
+            print(
+                "\033[93m\033[1mAttention\033[0m : "
+                "Requête vide, retour sans résultat."
+            )
+            return []
 
         synonyms = {
             "error": "exception traceback",
@@ -126,6 +141,14 @@ class BM25Retriever(BaseRetriever):
 
         # Custom tokenization for queries
         query_tokens = tokenize_code([expanded_query])
+
+        # If tokenization yields nothing, return empty
+        if not query_tokens or not query_tokens[0]:
+            print(
+                "\033[93m\033[1mAttention\033[0m : "
+                "Aucun token exploitable dans la requête."
+            )
+            return []
 
         # Ensure we don't ask for more chunks than we have
         k_min = min(k, len(self.chunks))

@@ -75,37 +75,55 @@ class RAGCLI:
             query (str): La requête ou question de l'utilisateur.
             k (int): Le nombre de chunks à retourner (Defaut: 5).
         """
-        if not os.path.exists(INDEX_SAVE_DIR):
+        try:
+            if not os.path.exists(INDEX_SAVE_DIR):
+                print(
+                    "\033[91m\033[1mErreur\033[0m : L'index n'existe pas. Veuillez exécuter "  # noqa: E501
+                    "'python -m src.main index' au préalable."
+                )
+                return
+
+            # Chargement
+            print("\033[93m\033[1mChargement du moteur de recherche...\033[0m")  # noqa: E501
+            start_time = time.time()
+            retriever = BM25Retriever()
+            retriever.load(INDEX_SAVE_DIR)
             print(
-                "\033[91m\033[1mErreur\033[0m : L'index n'existe pas. Veuillez exécuter "  # noqa: E501
-                "'python -m src.main index' au préalable."
+                f"\033[92m\033[1mMoteur chargé\033[0m en {time.time() - start_time:.2f}s"  # noqa: E501
             )
-            return
 
-        # Chargement
-        print("\033[93m\033[1mChargement du moteur de recherche...\033[0m")
-        start_time = time.time()
-        retriever = BM25Retriever()
-        retriever.load(INDEX_SAVE_DIR)
-        print(
-            f"\033[92m\033[1mMoteur chargé\033[0m en {time.time() - start_time:.2f}s"  # noqa: E501
-        )
+            # Recherche
+            print(f"\033[96m\033[1mRecherche pour\033[0m : '{query}'...")
+            results = retriever.search(query, k=k)
 
-        # Recherche
-        print(f"\033[96m\033[1mRecherche pour\033[0m : '{query}'...")
-        results = retriever.search(query, k=k)
+            # JSON output (StudentSearchResults)
+            search_result = MinimalSearchResults(
+                question_id="single_query",
+                question=str(query),
+                retrieved_sources=results,  # type: ignore[arg-type]
+            )
+            student_output = StudentSearchResults(
+                search_results=[search_result], k=k
+            )
+            print(json.dumps(
+                student_output.model_dump(by_alias=True), indent=2
+            ))
 
-        print("\n" + "=" * 50)
-        print(" RÉSULTATS DE RECHERCHE")
-        print("=" * 50)
-        for i, chunk in enumerate(results, 1):
-            print(f"\n[{i}] Fichier : {chunk.file_path}")
+            print("\n" + "=" * 50)
+            print(" RÉSULTATS DE RECHERCHE")
+            print("=" * 50)
+            for i, chunk in enumerate(results, 1):
+                print(f"\n[{i}] Fichier : {chunk.file_path}")
+                print(
+                    f"    Positions : {chunk.first_character_index} - "
+                    f"{chunk.last_character_index}"
+                )
+                text_preview = chunk.text[:200].replace("\n", " ")
+                print(f"    Aperçu : {text_preview}...")
+        except Exception as e:
             print(
-                f"    Positions : {chunk.first_character_index} - "
-                f"{chunk.last_character_index}"
+                f"\033[91m\033[1mErreur\033[0m lors de la recherche : {e}"  # noqa: E501
             )
-            text_preview = chunk.text[:200].replace("\n", " ")
-            print(f"    Aperçu : {text_preview}...")
 
     def evaluate(self, dataset_path: str, k: int = 5) -> None:
         """
@@ -201,104 +219,150 @@ class RAGCLI:
         print("=" * 50)
 
     def search_dataset(
-        self, dataset_path: str, output_path: str, k: int = 5
+        self,
+        dataset_path: str,
+        output_path: str = "data/output/search_results",
+        k: int = 5,
     ) -> None:
         """
         Traite un fichier de questions et exporte les résultats de recherche.
         """
-        if not os.path.exists(INDEX_SAVE_DIR):
-            print("\033[91m\033[1mErreur\033[0m : L'index n'existe pas.")
-            return
-
-        retriever = BM25Retriever()
-        retriever.load(INDEX_SAVE_DIR)
-
         try:
-            with open(dataset_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as e:
-            print(
-                f"\033[91m\033[1mErreur\033[0m lors de l'ouverture du dataset : {e}"  # noqa: E501
-            )
-            return
-        dataset = RagDataset(**data)
-
-        results_list = []
-        for q in tqdm(dataset.rag_questions, desc="Recherche en cours"):
-            chunks = retriever.search(q.question, k=k)
-
-            for chunk in chunks:
-                if chunk.file_path.startswith("vllm-0.10.1"):
-                    chunk.file_path = f"data/raw/{chunk.file_path}"
-
-            results_list.append(
-                MinimalSearchResults(
-                    question_id=q.question_id,
-                    question=q.question,
-                    retrieved_sources=chunks,  # type: ignore[arg-type]
+            if not os.path.exists(INDEX_SAVE_DIR):
+                print(
+                    "\033[91m\033[1mErreur\033[0m : L'index n'existe pas."
                 )
+                return
+
+            retriever = BM25Retriever()
+            retriever.load(INDEX_SAVE_DIR)
+
+            try:
+                with open(dataset_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception as e:
+                print(
+                    f"\033[91m\033[1mErreur\033[0m lors de l'ouverture "
+                    f"du dataset : {e}"
+                )
+                return
+            dataset = RagDataset(**data)
+
+            results_list = []
+            for q in tqdm(
+                dataset.rag_questions, desc="Recherche en cours"
+            ):
+                chunks = retriever.search(q.question, k=k)
+
+                for chunk in chunks:
+                    if chunk.file_path.startswith("vllm-0.10.1"):
+                        chunk.file_path = f"data/raw/{chunk.file_path}"
+
+                results_list.append(
+                    MinimalSearchResults(
+                        question_id=q.question_id,
+                        question=q.question,
+                        retrieved_sources=chunks,  # type: ignore[arg-type]
+                    )
+                )
+
+            student_results = StudentSearchResults(
+                search_results=results_list, k=k
+            )
+            out_dict = student_results.model_dump(by_alias=True)
+            os.makedirs(output_path, exist_ok=True)
+
+            input_filename = os.path.basename(dataset_path)
+            final_file_path = os.path.join(
+                output_path, f"results_{input_filename}"
             )
 
-        student_results = StudentSearchResults(
-            search_results=results_list, k=k
-        )
-        out_dict = student_results.model_dump(by_alias=True)
-        os.makedirs(output_path, exist_ok=True)
-
-        input_filename = os.path.basename(dataset_path)
-        final_file_path = os.path.join(output_path,
-                                       f"results_{input_filename}")
-
-        try:
-            with open(final_file_path, "w", encoding="utf-8") as f:
-                json.dump(out_dict, f, indent=4)
-            print(
-                f"\033[92m\033[1mRésultats\033[0m "
-                f"sauvegardés dans {final_file_path}"
-            )
+            try:
+                with open(final_file_path, "w", encoding="utf-8") as f:
+                    json.dump(out_dict, f, indent=4)
+                print(
+                    f"\033[92m\033[1mRésultats\033[0m "
+                    f"sauvegardés dans {final_file_path}"
+                )
+            except Exception as e:
+                print(
+                    f"\033[91m\033[1mErreur\033[0m de sauvegarde : {e}"
+                )
         except Exception as e:
-            print(f"\033[91m\033[1mErreur\033[0m de sauvegarde : {e}")
+            print(
+                f"\033[91m\033[1mErreur\033[0m search_dataset : {e}"
+            )
 
     def answer(self, query: str, k: int = 5, stream: bool = False) -> None:
         """
         Répond à une question en utilisant le contexte récupéré.
         """
-        if not os.path.exists(INDEX_SAVE_DIR):
-            print("\033[91m\033[1mErreur\033[0m : L'index n'existe pas.")
-            return
-
-        retriever = BM25Retriever()
-        retriever.load(INDEX_SAVE_DIR)
-
-        print(
-            f"\033[96m\033[1mRecherche de contexte\033[0m pour : '{query}'..."
-        )
         try:
-            chunks = retriever.search(query, k=k)
-        except Exception as e:
+            if not os.path.exists(INDEX_SAVE_DIR):
+                print(
+                    "\033[91m\033[1mErreur\033[0m : L'index n'existe pas."
+                )
+                return
+
+            retriever = BM25Retriever()
+            retriever.load(INDEX_SAVE_DIR)
+
             print(
-                f"\033[93m\033[1mAttention\033[0m : Erreur lors de la recherche : {e}"  # noqa: E501
+                f"\033[96m\033[1mRecherche de contexte\033[0m "
+                f"pour : '{query}'..."
             )
-            chunks = []
+            try:
+                chunks = retriever.search(query, k=k)
+            except Exception as e:
+                print(
+                    f"\033[93m\033[1mAttention\033[0m : "
+                    f"Erreur lors de la recherche : {e}"
+                )
+                chunks = []
 
-        llm = LLMClient()
-        try:
-            if stream:
-                print("\n" + "=" * 50)
-                print("\033[96m\033[1mRÉPONSE GÉNÉRÉE\033[0m")
-                print("=" * 50)
-                answer_text = llm.generate_answer(query, chunks, stream=True)
-                print("\n" + "=" * 50)
-            else:
-                answer_text = llm.generate_answer(query, chunks, stream=False)
-                print("\n" + "=" * 50)
-                print("\033[96m\033[1mRÉPONSE GÉNÉRÉE\033[0m")
-                print("=" * 50)
-                print(answer_text)
-                print("=" * 50)
+            llm = LLMClient()
+            answer_text = ""
+            try:
+                if stream:
+                    print("\n" + "=" * 50)
+                    print("\033[96m\033[1mRÉPONSE GÉNÉRÉE\033[0m")
+                    print("=" * 50)
+                    answer_text = llm.generate_answer(
+                        query, chunks, stream=True
+                    )
+                    print("\n" + "=" * 50)
+                else:
+                    answer_text = llm.generate_answer(
+                        query, chunks, stream=False
+                    )
+                    print("\n" + "=" * 50)
+                    print("\033[96m\033[1mRÉPONSE GÉNÉRÉE\033[0m")
+                    print("=" * 50)
+                    print(answer_text)
+                    print("=" * 50)
+            except Exception as e:
+                print(
+                    f"\033[93m\033[1mAttention\033[0m : "
+                    f"Erreur lors de la génération : {e}"
+                )
+                answer_text = "Erreur lors de la génération."
+
+            # JSON output (StudentSearchResultsAndAnswer)
+            answer_result = MinimalAnswer(
+                question_id="single_query",
+                question=str(query),
+                retrieved_sources=chunks,  # type: ignore[arg-type]
+                answer=answer_text,
+            )
+            student_output = StudentSearchResultsAndAnswer(
+                search_results=[answer_result], k=k
+            )
+            print(json.dumps(
+                student_output.model_dump(by_alias=True), indent=2
+            ))
         except Exception as e:
             print(
-                f"\033[93m\033[1mAttention\033[0m : Erreur lors de la génération : {e}"  # noqa: E501
+                f"\033[91m\033[1mErreur\033[0m answer : {e}"
             )
 
     def answer_dataset(
