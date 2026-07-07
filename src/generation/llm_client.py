@@ -107,13 +107,15 @@ class LLMClient:
             {
                 "role": "system",
                 "content": (
-                    "You are a helpful coding assistant. You must answer the "
-                    "user's question based ONLY on the provided context. "
-                    "Cite your sources. If the answer is not in the context, "
-                    "say so. Keep your answer concise, precise, and clear "
-                    "(maximum 3 sentences). DO NOT use <think> tags. "
-                    "DO NOT output internal reasoning. Provide the final "
-                    "answer immediately."
+                    "You are a strict technical assistant. You must answer "
+                    "the user's question based ONLY on the provided context. "
+                    "If the answer is not contained in the context, you MUST "
+                    "reply exactly with: 'The context provided does not "
+                    "contain the answer to this question.' DO NOT use outside "
+                    "knowledge. DO NOT make up answers. Keep your answer "
+                    "concise, precise, and clear (maximum 3 sentences). "
+                    "DO NOT use <think> tags. DO NOT output internal "
+                    "reasoning."
                 ),
             },
             {
