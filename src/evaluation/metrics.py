@@ -44,7 +44,13 @@ def compute_overlap_percentage(
     overlap_end = min(gt_end, ret_end)
     overlap_length = max(0, overlap_end - overlap_start)
 
-    return overlap_length / gt_length
+    if overlap_length == 0:
+        return 0.0
+
+    ret_length = ret_end - ret_start
+    union_length = gt_length + ret_length - overlap_length
+
+    return overlap_length / union_length
 
 
 def compute_recall_at_k_for_question(

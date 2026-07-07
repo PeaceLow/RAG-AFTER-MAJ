@@ -1,4 +1,7 @@
 .venv/
+.mypy_cache/
 
 __pycache__/
 evaluations
+
+en.subject.pdf

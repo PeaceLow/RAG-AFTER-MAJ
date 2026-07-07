@@ -125,25 +125,32 @@ class RAGCLI:
                 f"\033[91m\033[1mErreur\033[0m lors de la recherche : {e}"  # noqa: E501
             )
 
-    def evaluate(self, dataset_path: str, k: int = 5) -> None:
+    def evaluate(
+        self, student_search_results_path: str, dataset_path: str
+    ) -> None:
         """
-        Évalue le Recall@k sur un jeu de données (JSON).
+        Évalue le Recall@k sur un jeu de données (JSON) en comparant les
+        résultats de l'étudiant avec la vérité terrain.
 
         Args:
-            dataset_path (str): Chemin vers le fichier JSON du dataset
-                                (ground truth).
-            k (int): Le k pour calculer le Recall@k.
+            student_search_results_path (str): Chemin vers les
+                                               résultats de l'étudiant.
+            dataset_path (str): Chemin vers le fichier JSON du
+                                dataset (ground truth).
         """
-        if not os.path.exists(INDEX_SAVE_DIR):
+        print(
+            f"\033[96m\033[1mChargement des résultats\033[0m "
+            f"depuis {student_search_results_path}..."
+        )
+        try:
+            with open(student_search_results_path, "r", encoding="utf-8") as f:
+                student_data = json.load(f)
+            student_results = StudentSearchResults(**student_data)
+        except Exception as e:
             print(
-                "\033[91m\033[1mErreur\033[0m : L'index n'existe pas. Veuillez exécuter "  # noqa: E501
-                "'python -m src.main index' au préalable."
+                f"\033[91m\033[1mErreur\033[0m lors de l'ouverture des résultats : {e}"  # noqa: E501
             )
             return
-
-        print("\033[93m\033[1mChargement du moteur de recherche...\033[0m")
-        retriever = BM25Retriever()
-        retriever.load(INDEX_SAVE_DIR)
 
         print(
             f"\033[96m\033[1mChargement du dataset\033[0m depuis {dataset_path}..."  # noqa: E501
@@ -168,16 +175,36 @@ class RAGCLI:
         code_recall = 0.0
         code_count = 0
 
+        k = student_results.k
         print(
             f"\033[93m\033[1mDébut de l'évaluation\033[0m sur {len(dataset.rag_questions)} "  # noqa: E501
             f"questions (Recall@{k})..."
         )
+
+        # Création d'un dictionnaire des résultats pour un accès rapide
+        student_results_dict = {
+            res.question_id: res.retrieved_sources
+            for res in student_results.search_results
+        }
+
         for q in tqdm(dataset.rag_questions, desc="Évaluation"):
             if not isinstance(q, AnsweredQuestion) or not q.sources:
                 continue
 
-            results = retriever.search(q.question, k=k)
-            recall = compute_recall_at_k_for_question(q.sources, results, k)
+            retrieved_chunks = student_results_dict.get(q.question_id, [])
+            # On convertit les MinimalSource récupérés en "Chunk" mockés
+            mocked_chunks = [
+                Chunk(
+                    file_path=src.file_path,
+                    first_character_index=src.first_character_index,
+                    last_character_index=src.last_character_index,
+                    text=""
+                ) for src in retrieved_chunks
+            ]
+
+            recall = compute_recall_at_k_for_question(
+                q.sources, mocked_chunks, k
+            )
 
             total_recall += recall
             question_count += 1
@@ -221,7 +248,7 @@ class RAGCLI:
     def search_dataset(
         self,
         dataset_path: str,
-        output_path: str = "data/output/search_results",
+        save_directory: str = "data/output/search_results",
         k: int = 5,
     ) -> None:
         """
@@ -270,11 +297,11 @@ class RAGCLI:
                 search_results=results_list, k=k
             )
             out_dict = student_results.model_dump(by_alias=True)
-            os.makedirs(output_path, exist_ok=True)
+            os.makedirs(save_directory, exist_ok=True)
 
             input_filename = os.path.basename(dataset_path)
             final_file_path = os.path.join(
-                output_path, f"results_{input_filename}"
+                save_directory, f"results_{input_filename}"
             )
 
             try:
