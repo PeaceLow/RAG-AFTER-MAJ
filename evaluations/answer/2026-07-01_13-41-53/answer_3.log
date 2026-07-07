@@ -1,0 +1,40 @@
+[96m[1mRecherche de contexte[0m pour : 'How do you enable expert parallelism in vLLM for MoE models?'...
+[93m[1mChargement[0m du modèle Qwen/Qwen3-0.6B sur cpu...
+[90mCompilation du modèle en cours (le premier run sera plus long)...[0m
+
+==================================================
+[96m[1mRÉPONSE GÉNÉRÉE[0m
+==================================================
+[90m<think>
+Okay, the user is asking how to enable expert parallelism in vLLM for MoE models. Let me look through the context provided.
+
+First, I remember from the sources that expert parallelism is a specialized form of parallelism for MoE models. The context mentions that it's enabled by setting `enable_expert_parallel=True`. Also, there's a note about using the `--enable-expert-parallel` CLI argument, which is part of the configuration.
+
+Looking at the source 2, there's a line: `enable_expert_parallel: bool = False` and then setting it to `True`. Also, source 5 and 6 talk about the `enable_eplb` parameter, which is part of the FusedMoE class. 
+
+Wait, source 7 also mentions `enable_expert_parallel` as a configuration parameter. So the answer should be that you need to set `enable_expert_parallel=True` in the configuration. Additionally, using the CLI argument `--enable-expert-parallel` is necessary. 
+
+I should make sure not to include any other parameters mentioned, like `enable_eplb`, since that's part of the expert parallelism setup. The user might be confused between different parameters, so clarifying that `enable_expert_parallel` is the key here is important.
+</think>[0m
+
+To enable expert parallelism in vLLM for MoE models, follow these steps:
+
+1. **Set `enable_expert_parallel=True` in the configuration**: This parameter is part of the configuration object and enables expert parallelism for MoE layers.  
+   Example:  
+   ```python
+   enable_expert_parallel: bool = True
+   ```
+
+2. **Use the CLI argument `--enable-expert-parallel`**: This is a command-line flag that activates expert parallelism.  
+   Example:  
+   ```bash
+   vllm --enable-expert-parallel
+   ```
+
+3. **Enable expert load balancing (EPLB)**: While `enable_eplb` is part of the configuration, it is not directly used for MoE models. Instead, it is enabled by default and used for load balancing across experts. However, it is not required for MoE models unless specified.
+
+These configurations ensure that expert networks are distributed across GPUs, leveraging their parallelism for efficient computation in MoE architectures.[0m
+
+[96m[1m[ Résultats [0m: Tokens consommés : 4439 (prompt) | ~491 (réponse) ][0m
+
+==================================================

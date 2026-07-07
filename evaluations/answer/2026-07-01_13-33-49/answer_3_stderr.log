@@ -1,0 +1,42 @@
+BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/311 [00:00<?, ?it/s]Loading weights:  61%|██████▏   | 191/311 [00:00<00:00, 1909.59it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 1986.91it/s]
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/avauclai/Desktop/RAGGGG/src/main.py", line 385, in <module>
+    fire.Fire(RAGCLI)
+    ~~~~~~~~~^^^^^^^^
+  File "/home/avauclai/Desktop/RAGGGG/.venv/lib/python3.14/site-packages/fire/core.py", line 135, in Fire
+    component_trace = _Fire(component, args, parsed_flag_args, context, name)
+  File "/home/avauclai/Desktop/RAGGGG/.venv/lib/python3.14/site-packages/fire/core.py", line 468, in _Fire
+    component, remaining_args = _CallAndUpdateTrace(
+                                ~~~~~~~~~~~~~~~~~~~^
+        component,
+        ^^^^^^^^^^
+    ...<2 lines>...
+        treatment='class' if is_class else 'routine',
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        target=component.__name__)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/avauclai/Desktop/RAGGGG/.venv/lib/python3.14/site-packages/fire/core.py", line 684, in _CallAndUpdateTrace
+    component = fn(*varargs, **kwargs)
+  File "/home/avauclai/Desktop/RAGGGG/src/main.py", line 290, in answer
+    answer_text = llm.generate_answer(query, chunks, stream=True)
+  File "/home/avauclai/Desktop/RAGGGG/src/generation/llm_client.py", line 156, in generate_answer
+    for new_text in streamer:
+                    ^^^^^^^^
+  File "/home/avauclai/Desktop/RAGGGG/.venv/lib/python3.14/site-packages/transformers/generation/streamers.py", line 219, in __next__
+    value = self.text_queue.get(timeout=self.timeout)
+  File "/home/avauclai/.local/share/uv/python/cpython-3.14.5-linux-x86_64-gnu/lib/python3.14/queue.py", line 199, in get
+    self.not_empty.wait()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/home/avauclai/.local/share/uv/python/cpython-3.14.5-linux-x86_64-gnu/lib/python3.14/threading.py", line 369, in wait
+    waiter.acquire()
+    ~~~~~~~~~~~~~~^^
+KeyboardInterrupt
+Exception ignored while joining a thread in _thread._shutdown():
+Traceback (most recent call last):
+  File "/home/avauclai/.local/share/uv/python/cpython-3.14.5-linux-x86_64-gnu/lib/python3.14/threading.py", line 1583, in _shutdown
+    _thread_shutdown()
+KeyboardInterrupt: 

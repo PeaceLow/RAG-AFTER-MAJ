@@ -1,0 +1,26 @@
+[96m[1mRecherche de contexte[0m pour : 'What API endpoint does vLLM support for chat completions?'...
+[93m[1mChargement[0m du modèle Qwen/Qwen3-0.6B sur cpu...
+[90mCompilation du modèle en cours (le premier run sera plus long)...[0m
+
+==================================================
+[96m[1mRÉPONSE GÉNÉRÉE[0m
+==================================================
+[90m<think>
+Okay, the user is asking about the API endpoint vLLM supports for chat completions. Let me look through the context provided.
+
+First, I see in Source 2 and Source 3 and Source 4 and Source 5. The context mentions that vLLM is compatible with OpenAI's API, allowing use as a drop-in replacement. For example, they use the OpenAI Python package. 
+
+In Source 3, there's a code snippet that starts by modifying the OpenAI API key and base URL to use vLLM's server. The code sets the base URL to "http://localhost:8000/v1". So that's the endpoint. 
+
+Also, in Source 8, there's a Python client example that uses the base URL as "http://localhost:8000/v1". That confirms that the endpoint is that URL. 
+
+Additionally, Source 4 mentions that the vLLM server is used for chat completion, and Source 5 provides examples of starting the vLLM server with the model name. 
+
+So putting it all together, the API endpoint for chat completions is "http://localhost:8000/v1".
+</think>[0m
+
+The API endpoint for chat completions supported by vLLM is **http://localhost:8000/v1**. This endpoint is used to interact with the OpenAI-compatible server as a drop-in replacement for applications using the OpenAI API.[0m
+
+[96m[1m[ Résultats [0m: Tokens consommés : 3727 (prompt) | ~305 (réponse) ][0m
+
+==================================================
