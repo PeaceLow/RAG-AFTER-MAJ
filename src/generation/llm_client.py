@@ -1,5 +1,5 @@
 import torch
-from typing import List
+from typing import List, Any
 import sys
 import os
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -90,7 +90,7 @@ class LLMClient:
         self,
         question: str,
         chunks: List[Chunk],
-        max_new_tokens: int = 256,
+        max_new_tokens: int = 350,
         stream: bool = False,
     ) -> str:
         """
@@ -111,7 +111,9 @@ class LLMClient:
                     "user's question based ONLY on the provided context. "
                     "Cite your sources. If the answer is not in the context, "
                     "say so. Keep your answer concise, precise, and clear "
-                    "(maximum 3 sentences)."
+                    "(maximum 3 sentences). DO NOT use <think> tags. "
+                    "DO NOT output internal reasoning. Provide the final "
+                    "answer immediately."
                 ),
             },
             {
@@ -139,7 +141,49 @@ class LLMClient:
             from transformers import TextIteratorStreamer
             from threading import Thread
 
-            streamer = TextIteratorStreamer(
+            class CleanStreamer(TextIteratorStreamer):
+                def __init__(self, *args: Any, **kwargs: Any) -> None:
+                    super().__init__(*args, **kwargs)
+                    self._in_think = False
+                    self._buffer = ""
+                    import queue
+                    self._clean_queue: queue.Queue[Any] = queue.Queue()
+
+                def on_finalized_text(
+                    self, text: str, stream_end: bool = False
+                ) -> None:
+                    self._buffer += text
+
+                    if not self._in_think and "<think>" in self._buffer:
+                        parts = self._buffer.split("<think>", 1)
+                        if parts[0]:
+                            self._clean_queue.put(parts[0])
+                        self._in_think = True
+                        self._buffer = "<think>" + parts[1]
+
+                    if self._in_think and "</think>" in self._buffer:
+                        parts = self._buffer.split("</think>", 1)
+                        self._in_think = False
+                        self._buffer = parts[1].lstrip('\n')
+
+                    if not self._in_think:
+                        if self._buffer:
+                            self._clean_queue.put(self._buffer)
+                            self._buffer = ""
+
+                    if stream_end:
+                        self._clean_queue.put(self.stop_signal)
+
+                def __iter__(self) -> "CleanStreamer":
+                    return self
+
+                def __next__(self) -> str:
+                    value = self._clean_queue.get(timeout=self.timeout)
+                    if value == self.stop_signal:
+                        raise StopIteration()
+                    return str(value)
+
+            streamer = CleanStreamer(
                 self.tokenizer, skip_prompt=True, skip_special_tokens=True
             )
             generation_kwargs = dict(
@@ -159,13 +203,7 @@ class LLMClient:
 
             response_text = ""
             for new_text in streamer:
-                if "<think>" in new_text:
-                    new_text = new_text.replace("<think>", "\033[90m<think>")
-                if "</think>" in new_text:
-                    new_text = new_text.replace("</think>", "</think>\033[0m")
-
-                sys.stdout.write(new_text)
-                sys.stdout.flush()
+                print(new_text, end="", flush=True)
                 response_text += new_text
 
             thread.join()
@@ -211,4 +249,12 @@ class LLMClient:
             )
             sys.stdout.flush()
 
-            return response.strip()
+            response = response.strip()
+            import re
+            response = re.sub(
+                r'<think>.*?</think>\s*',
+                '',
+                response,
+                flags=re.DOTALL
+            )
+            return response
