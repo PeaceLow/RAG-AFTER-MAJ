@@ -488,6 +488,21 @@ class RAGCLI:
         except Exception as e:
             print(f"\033[91m\033[1mErreur\033[0m de sauvegarde : {e}")
 
+    def api(self, host: str = "0.0.0.0", port: int = 8000) -> None:
+        """
+        Démarre l'API HTTP locale pour le système RAG.
+
+        Args:
+            host (str): L'hôte sur lequel démarrer le serveur.
+            port (int): Le port sur lequel démarrer le serveur.
+        """
+        import uvicorn
+        print(
+            f"\033[96m\033[1mDémarrage de l'API HTTP\033[0m "
+            f"sur http://{host}:{port}..."
+        )
+        uvicorn.run("src.api:app", host=host, port=port, reload=False)
+
 
 if __name__ == "__main__":
     fire.Fire(RAGCLI)

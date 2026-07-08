@@ -59,12 +59,17 @@ We chose **BM25** (via the `bm25s` library), an advanced TF-IDF variant. It effi
 - Adhering strictly to `flake8` standards without compromising code readability or disabling `E501` aggressively (handled via `.flake8` configurations).
 - Resolving Mypy invariant covariance logic for inherited `List` Pydantic properties.
 
+## Bonuses Implemented
+- **LLM Caching (Bonus 4):** The system caches generated answers on disk (`data/cache/llm_cache.json`) based on the SHA-256 hash of the query and context. Identical queries are instantly served from the cache, significantly reducing inference time.
+- **Incremental Indexing:** The BM25 indexing pipeline tracks MD5 hashes of all processed files. During re-indexation, it detects unchanged files and skips the chunking process entirely, dramatically speeding up iterative development.
+- **Local HTTP API (Bonus 5):** A fully functional local HTTP API is implemented using FastAPI and Uvicorn. It exposes `/health`, `/search`, and `/answer` endpoints, allowing external clients to query the RAG system directly without using the CLI.
+
 ## Example Usage
 ```bash
 # Install dependencies
 uv sync
 
-# Index the vLLM repository
+# Index the vLLM repository (Supports Incremental Indexing)
 uv run python -m src index --repo_path vllm-0.10.1
 
 # Search for relevant chunks (outputs valid JSON via StudentSearchResults)
@@ -86,7 +91,28 @@ uv run python -m src answer_dataset data/output/search_results/results_dataset_d
 uv run python -m src evaluate --dataset_path datasets_public/public/AnsweredQuestions/dataset_docs_public.json --k 10
 ```
 
+### Testing the Local HTTP API
+You can start the API in one terminal:
+```bash
+uv run python -m src api
+```
+
+And test it from another terminal using `curl`:
+```bash
+# Health Check
+curl -s http://localhost:8000/health
+
+# Perform a search
+curl -s "http://localhost:8000/search?query=how%20to%20configure%20openai%20server&k=2"
+
+# Generate an AI Answer (Formatted nicely with jq/python json.tool)
+curl -s -X POST http://localhost:8000/answer \
+     -H "Content-Type: application/json" \
+     -d '{"query": "How to configure OpenAI server?"}' | python -m json.tool
+```
+
 ## Resources
 - [Qwen Model Documentation](https://huggingface.co/Qwen)
 - [BM25s Library](https://github.com/xhluca/bm25s)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - **AI Usage:** Generative models were utilized during the conception phase to understand the mathematics behind the BM25 formula, brainstorm Python AST edge cases, and refine the typing and linting workflows. All generated code was systematically tested and reviewed.
