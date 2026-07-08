@@ -1,14 +1,21 @@
 import torch
-from typing import List, Any
+from typing import List, Any, Dict
 import sys
 import os
+import json
+import hashlib
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from src.models import Chunk
 
+CACHE_DIR = "data/cache"
+CACHE_FILE = os.path.join(CACHE_DIR, "llm_cache.json")
+
 
 class LLMClient:
     """Client for generating answers using local LLM."""
+
+    _cache: Dict[str, str] = {}
 
     def __init__(
         self, model_name: str = "Qwen/Qwen3-0.6B", device: str = "auto"
@@ -86,6 +93,36 @@ class LLMClient:
                 print(f"\033[93mInfo : torch.compile "
                       f"non supporté sur cette version ({e})\033[0m")
 
+        self._load_cache()
+
+    def _load_cache(self) -> None:
+        """Load the LLM response cache from disk."""
+        if os.path.exists(CACHE_FILE):
+            try:
+                with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                    LLMClient._cache = json.load(f)
+                print(
+                    f"\033[92m\033[1mCache LLM\033[0m : "
+                    f"{len(LLMClient._cache)} réponses en cache."
+                )
+            except Exception:
+                LLMClient._cache = {}
+
+    def _save_cache(self) -> None:
+        """Save the LLM response cache to disk."""
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        try:
+            with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                json.dump(LLMClient._cache, f, ensure_ascii=False)
+        except Exception:
+            pass
+
+    @staticmethod
+    def _cache_key(question: str, context: str) -> str:
+        """Generate a cache key from question + context."""
+        raw = f"{question}|||{context}"
+        return hashlib.sha256(raw.encode()).hexdigest()
+
     def generate_answer(
         self,
         question: str,
@@ -102,6 +139,17 @@ class LLMClient:
                 for i, chunk in enumerate(chunks)
             ]
         )
+
+        # --- Cache lookup ---
+        cache_key = self._cache_key(question, context_text)
+        if cache_key in LLMClient._cache:
+            cached = LLMClient._cache[cache_key]
+            sys.stdout.write(
+                "\033[92m\033[1m[CACHE HIT]\033[0m "
+                "Réponse servie depuis le cache.\n\n"
+            )
+            print(cached)
+            return cached
 
         messages = [
             {
@@ -221,7 +269,10 @@ class LLMClient:
             )
             sys.stdout.flush()
 
-            return response_text.strip()
+            response_text = response_text.strip()
+            LLMClient._cache[cache_key] = response_text
+            self._save_cache()
+            return response_text
         else:
             with torch.no_grad():
                 generated_ids = self.model.generate(  # type: ignore[misc]
@@ -259,4 +310,6 @@ class LLMClient:
                 response,
                 flags=re.DOTALL
             )
+            LLMClient._cache[cache_key] = response
+            self._save_cache()
             return response
