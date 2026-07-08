@@ -131,7 +131,7 @@ echo ""
 run_moulinette list_valid_questions \
     --student_answer_path "$DOCS_RESULTS" \
     --dataset_path "$DOCS_DATASET" \
-    --k 10 \
+    --k 3 \
     2>&1 | tee "$EVAL_DIR/valid_questions.log" || {
     echo -e "${YELLOW}WARNING: list_valid_questions failed. This may indicate a schema"
     echo -e "mismatch in the search results file. You can still select questions"
@@ -171,7 +171,7 @@ for question in "${QUESTIONS[@]}"; do
 
     cd "$STUDENT_PATH"
     echo -e "${BOLD}Student answer:${NC}"
-    uv run python -m $MODULE_NAME answer "$question" --k 10 --stream True \
+    uv run python -m $MODULE_NAME answer "$question" --k 3 --stream True \
         2> "$EVAL_DIR/answer_${ANSWER_NUM}_stderr.log" \
         | tee "$EVAL_DIR/answer_${ANSWER_NUM}.log"
 

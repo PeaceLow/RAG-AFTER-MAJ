@@ -68,7 +68,7 @@ def health_check() -> dict:
 @app.get("/search", response_model=List[SearchResponse])
 def search(
     query: str = Query(..., description="The search query"),
-    k: int = Query(5, description="Number of results to return")
+    k: int = Query(3, description="Number of results to return")
 ) -> List[dict]:
     """Search for relevant chunks using BM25."""
     if not retriever:

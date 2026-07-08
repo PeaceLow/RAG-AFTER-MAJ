@@ -166,7 +166,7 @@ class LLMClient:
                     "start your answer with phrases like 'Based on the "
                     "context' or 'The context outlines'. Just provide the "
                     "direct factual answer. DO NOT use <think> tags. DO NOT "
-                    "output internal reasoning." 
+                    "output internal reasoning. NEVER response with emojis" 
                 ),
             },
             {
