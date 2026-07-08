@@ -51,7 +51,7 @@ clean:
 	find . -type d -name ".mypy_cache" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	find . -type d -name ".ruff_cache" -exec rm -rf {} +
-	rm -rf data/processed/bm25_index/* data/output/search_results/* data/output/answers/* data/datasets/private/ datasets_public/
+	rm -rf data/processed/bm25_index/* data/output/search_results/* data/output/answers/* datasets_public/
 
 fclean: clean
 	rm -rf .venv
