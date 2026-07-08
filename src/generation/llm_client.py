@@ -162,8 +162,11 @@ class LLMClient:
                     "contain the answer to this question.' DO NOT use outside "
                     "knowledge. DO NOT make up answers. Keep your answer "
                     "concise, precise, and clear (maximum 3 sentences). "
-                    "DO NOT use <think> tags. DO NOT output internal "
-                    "reasoning."
+                    "Answer directly without conversational filler. DO NOT "
+                    "start your answer with phrases like 'Based on the "
+                    "context' or 'The context outlines'. Just provide the "
+                    "direct factual answer. DO NOT use <think> tags. DO NOT "
+                    "output internal reasoning."
                 ),
             },
             {
