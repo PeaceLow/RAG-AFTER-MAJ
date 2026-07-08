@@ -34,7 +34,7 @@ class RAGCLI:
         max_chunk_size: int = MAX_CHUNK_SIZE,
     ) -> None:
         """
-        Indexe le dépôt de code.
+        Indexe le dépôt de code (supporte l'indexation incrémentale).
 
         Args:
             repo_path (str): Le chemin vers le dépôt à indexer.
@@ -42,8 +42,24 @@ class RAGCLI:
         """
         start_time = time.time()
 
-        # 1. Pipeline d'ingestion (découpage)
-        chunks = build_pipeline(repo_path, max_chunk_size=max_chunk_size)
+        # Load existing chunks for incremental mode
+        old_chunks = None
+        if os.path.exists(INDEX_SAVE_DIR):
+            try:
+                existing = BM25Retriever()
+                existing.load(INDEX_SAVE_DIR)
+                old_chunks = existing.chunks
+            except Exception:
+                old_chunks = None
+
+        # 1. Pipeline d'ingestion (avec support incrémental)
+        from src.ingestion.pipeline import save_hashes
+        chunks, file_hashes = build_pipeline(
+            repo_path,
+            max_chunk_size=max_chunk_size,
+            index_dir=INDEX_SAVE_DIR,
+            old_chunks=old_chunks,
+        )
 
         if not chunks:
             print(
@@ -60,6 +76,7 @@ class RAGCLI:
 
         # 3. Sauvegarde
         retriever.save(INDEX_SAVE_DIR)
+        save_hashes(INDEX_SAVE_DIR, file_hashes)
 
         elapsed = time.time() - start_time
         print(
