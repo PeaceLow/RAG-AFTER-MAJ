@@ -265,7 +265,7 @@ class RAGCLI:
     def search_dataset(
         self,
         dataset_path: str,
-        save_directory: str = "data/output/search_results",
+        output_path: str = "data/output/search_results",
         k: int = 5,
     ) -> None:
         """
@@ -314,11 +314,11 @@ class RAGCLI:
                 search_results=results_list, k=k
             )
             out_dict = student_results.model_dump(by_alias=True)
-            os.makedirs(save_directory, exist_ok=True)
+            os.makedirs(output_path, exist_ok=True)
 
             input_filename = os.path.basename(dataset_path)
             final_file_path = os.path.join(
-                save_directory, f"results_{input_filename}"
+                output_path, f"results_{input_filename}"
             )
 
             try:
@@ -410,7 +410,7 @@ class RAGCLI:
             )
 
     def answer_dataset(
-        self, student_search_results_path: str, save_directory: str
+        self, student_search_results_path: str, output_path: str
     ) -> None:
         """
         Génère les réponses de tout un dataset à partir des
@@ -452,11 +452,16 @@ class RAGCLI:
                                 text=text,
                             )
                         )
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(
+                        f"\033[93m\033[1mAttention\033[0m : Impossible "
+                        f"de lire {src.file_path} - {e}"
+                    )
 
             try:
-                answer_text = llm.generate_answer(result.question, chunks)
+                answer_text = llm.generate_answer(
+                    result.question, chunks, stream=False
+                )
             except Exception:
                 answer_text = "Erreur."
 
@@ -473,18 +478,21 @@ class RAGCLI:
             search_results=answered_results, k=search_results.k
         )
 
-        os.makedirs(save_directory, exist_ok=True)
+        os.makedirs(output_path, exist_ok=True)
         filename = os.path.basename(student_search_results_path)
-        output_path = os.path.join(save_directory, filename)
+        final_file_path = os.path.join(output_path, filename)
 
         try:
-            with open(output_path, "w", encoding="utf-8") as f:
+            with open(final_file_path, "w", encoding="utf-8") as f:
                 json.dump(final_result.model_dump(), f, indent=2)
             print(
                 f"Processed {len(answered_results)} of "
                 f"{len(answered_results)} questions"
             )
-            print(f"Saved student_search_results_and_answer to {output_path}")
+            print(
+                "Saved student_search_results_and_answer "
+                f"to {final_file_path}"
+            )
         except Exception as e:
             print(f"\033[91m\033[1mErreur\033[0m de sauvegarde : {e}")
 
